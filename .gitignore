@@ -1,0 +1,5 @@
+build/
+buildRepo/
+.idea/
+.gradle/
+src/main/kotlin/me/maya/revolt/Main.kt
