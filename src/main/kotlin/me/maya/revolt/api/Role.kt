@@ -8,4 +8,8 @@ interface Role: IHasID, IUpdateable<Role> {
     val colour: Color
     val hoist: Boolean
     val rank: Int
+    val server: Server
+
+    val color: Color
+        get() = colour
 }

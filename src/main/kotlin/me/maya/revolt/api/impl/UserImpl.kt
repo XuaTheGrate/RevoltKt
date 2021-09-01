@@ -7,24 +7,37 @@ import me.maya.revolt.api.Image
 import me.maya.revolt.api.Relation
 import me.maya.revolt.api.User
 
-class UserImpl internal constructor(data: JsonObject, internal val state: State): User {
+class UserImpl internal constructor(
+    data: JsonObject,
+    val state: State
+): User {
     override val id = data["_id"].string
-    override val avatar = TODO() //data["avatar"].maybe { Image(it.jsonObject, state) }
-    override val badges = Badges(data["badges"].int)
-    override val online = data["online"].boolean
-    override val relationship = Relation.valueOf(data["relationship"].string)
-    override val status = data["status"].maybe {
+
+    override var avatar = data["avatar"].maybe { ImageImpl(it.jsonObject, state) }
+    override var badges = Badges(data["badges"].int)
+    override var online = data["online"].boolean
+    override var relationship = Relation.valueOf(data["relationship"].string)
+    override var username = data["username"].string
+
+    override var status = data["status"].maybe {
         val obj = it.jsonObject
         User.Status(obj["text"].maybe { it.string }, User.Status.Presence.valueOf(obj["presence"].string))
     } ?: User.Status(null, User.Status.Presence.Online)
-    override val username = data["username"].string
 
     internal val ownerId: String? = data["bot"].maybe { it.jsonObject["owner"].string }
 
-    override val owner: User?
-        get() = TODO("Not yet implemented")
+    override val owner: User? get() = ownerId?.let { state.users.get(it) }
 
     override fun update(data: User): User {
-        TODO("Not yet implemented")
+        data as UserImpl
+
+        avatar = data.avatar
+        badges = data.badges
+        online = data.online
+        relationship = data.relationship
+        username = data.username
+        status = data.status
+
+        return this
     }
 }

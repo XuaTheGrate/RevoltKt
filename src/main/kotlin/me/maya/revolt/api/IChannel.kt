@@ -6,5 +6,4 @@ interface IChannel<T: IChannel<T>>: IHasID, IUpdateable<T> {
     val name: String
     val description: String?
     val icon: Image?
-    val category: Category?
 }

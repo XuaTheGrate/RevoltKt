@@ -4,28 +4,30 @@ import com.mayak.json.JsonObject
 import me.maya.revolt.State
 import me.maya.revolt.api.*
 
-class CategoryImpl(
+class CategoryImpl internal constructor(
+    private val serverId: String,
     data: JsonObject,
     val state: State
 ): Category {
-    override var title: String = data["title"].string
-    override val id: String = data["_id"].string
-
-    private var channelIds = mutableSetOf<String>()
-
-    override val channels: List<IChannel<*>>
-        get() = channelIds.mapNotNull { state.textChannels.get(it) ?: state.voiceChannels.get(it) }
+    override val id: String = data["id"].string
+    override val server: Server get() = state.servers.get(serverId)
 
     override val textChannels: List<TextChannel>
-        get() = channels.filterIsInstance<TextChannel>()
+        get() = server.textChannels.filter { it.id in channelIds }
     override val voiceChannels: List<VoiceChannel>
-        get() = channels.filterIsInstance<VoiceChannel>()
+        get() = server.voiceChannels.filter { it.id in channelIds }
+
+    override var title: String = data["title"].string
+
+    private val channelIds = mutableSetOf<String>()
 
     override fun update(data: Category): Category {
         data as CategoryImpl
 
         title = data.title
-        channelIds = data.channelIds
+
+        channelIds.clear()
+        channelIds.addAll(data.channelIds)
         return this
     }
 

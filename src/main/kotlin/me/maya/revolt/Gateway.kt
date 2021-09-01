@@ -7,7 +7,10 @@ import io.ktor.http.cio.websocket.*
 import kotlinx.coroutines.*
 import kotlinx.coroutines.flow.collect
 import kotlinx.coroutines.flow.receiveAsFlow
+import me.maya.revolt.api.impl.MessageImpl
 import me.maya.revolt.errors.RevoltError
+import me.maya.revolt.events.Event
+import me.maya.revolt.events.EventHandler
 import org.slf4j.Logger
 import org.slf4j.LoggerFactory
 import kotlin.properties.Delegates
@@ -20,6 +23,11 @@ class Gateway internal constructor(val http: HttpClient) {
     val state = http.state
     var gateway: DefaultClientWebSocketSession by Delegates.notNull()
     val stopEvent = CompletableDeferred<Unit>()
+    internal var errorCallback: (suspend (Event, Throwable) -> Unit) = { ev, er ->
+        System.err.println("Error occured in event processing ($ev")
+        er.printStackTrace()
+    }
+
     val errorHandler = CoroutineExceptionHandler { ctx, err ->
         logger.error("Error occured during event handling", err)
     }
@@ -28,6 +36,8 @@ class Gateway internal constructor(val http: HttpClient) {
     private var pongOccured = CompletableDeferred<Unit>()
     private var pingJob: Job? = null
     private var readyEvent = CompletableDeferred<Unit>()
+
+    internal val eventHandlers = mutableListOf<EventHandler>()
 
     suspend fun recvLoop() {
         gateway.incoming.receiveAsFlow().collect {
@@ -45,7 +55,30 @@ class Gateway internal constructor(val http: HttpClient) {
                 // pongOccured.complete(Unit)
             }
             "Ready" -> {
+                state.readyCacheUpdate(data)
                 readyEvent.complete(Unit)
+            }
+            else -> {
+                if (!readyEvent.isCompleted) readyEvent.await()
+            }
+        }
+
+        val event: Event = when (val type = data["type"].string) {
+            "Message" -> Event.Message(MessageImpl(data, state))
+            else -> return // throw IllegalArgumentException("Unknown event: $type")
+        }
+
+        eventHandlers.forEach {
+            GlobalScope.launch {
+                try { it.onEvent(event) }
+                catch (e: Throwable) { errorCallback(event, e) }
+            }
+
+            GlobalScope.launch {
+                try { when (event) {
+                        is Event.Message -> it.onMessage(event)
+                        else -> {}
+                    } } catch (e: Throwable) { errorCallback(event, e) }
             }
         }
     }
@@ -90,7 +123,6 @@ class Gateway internal constructor(val http: HttpClient) {
         state.load()
 
         http.client.wss(state.ws) {
-            // println("GATEWAY: connected successfully")
             logger.info("Connected successfully")
             gateway = this
             authenticate()

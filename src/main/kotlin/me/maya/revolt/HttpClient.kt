@@ -1,6 +1,7 @@
 package me.maya.revolt
 
 import com.mayak.json.Json
+import com.mayak.json.JsonArray
 import com.mayak.json.JsonNode
 import com.mayak.json.JsonObject
 import io.ktor.client.HttpClient
@@ -17,10 +18,14 @@ import kotlin.properties.Delegates
 import kotlin.time.Duration
 
 class HttpClient internal constructor(val state: State) {
+    init {
+        state.http = this
+    }
+
     val logger: Logger = LoggerFactory.getLogger(HttpClient::class.java)
 
     companion object {
-        fun newState() = HttpClient(State()).apply { state.http = this }
+        fun newState() = HttpClient(State())
     }
 
     var token: String by Delegates.notNull()
@@ -78,6 +83,11 @@ class HttpClient internal constructor(val state: State) {
 
     suspend fun queryNode(): JsonObject {
         val data = request(HttpMethod.Get, "/")
+        return data!!.jsonObject
+    }
+
+    suspend fun getMembers(serverId: String): JsonObject {
+        val data = request(HttpMethod.Get, "/servers/$serverId/members")
         return data!!.jsonObject
     }
 }

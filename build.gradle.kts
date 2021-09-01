@@ -19,7 +19,7 @@ repositories {
 
 dependencies {
     // implementation(kotlin("stdlib"))
-    // implementation(kotlin("reflect"))
+    implementation(kotlin("reflect"))
 
     implementation("io.ktor", "ktor-client-core", ktorVersion)
     implementation("io.ktor", "ktor-client-cio", ktorVersion)
