@@ -14,7 +14,7 @@ class TextChannelImpl internal constructor(
     override val type: ChannelType = ChannelType.Text
     override val server: Server get() = state.servers.get(serverId)
 
-    override var lastMessage: String = data["last_message"].string
+    override var lastMessage: String? = data["last_message"].maybe { it.string }
     override var name: String = data["name"].string
     override var description: String? = data["description"].maybe { it.string }
     override var icon: Image? = data["icon"].maybe {
