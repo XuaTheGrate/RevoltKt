@@ -43,7 +43,8 @@ class State {
             servers.put(server.id, server)
         }
         data["channels"].jsonArray.forEach { val it = it.jsonObject
-            val server = servers.get(it["server"].string) as ServerImpl
+            val serverId = it["server"].maybe { it.string } ?: return@forEach
+            val server = servers.get(serverId) as ServerImpl
 
             when (val type = it["channel_type"].string) {
                 "TextChannel" -> TextChannelImpl(it, this).apply { server.textChannelCache.put(id, this) }
