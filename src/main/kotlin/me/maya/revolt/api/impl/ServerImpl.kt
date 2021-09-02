@@ -71,14 +71,18 @@ class ServerImpl internal constructor(
     override val voiceChannels: List<VoiceChannel> get() = voiceChannelCache.mapping.values.toList()
 
     init {
-        data["categories"].jsonArray.forEach {
-            val cat = CategoryImpl(id, it.jsonObject, state)
-            categoryCache.put(cat.id, cat)
+        data["categories"].maybe {
+            it.jsonArray.forEach {
+                val cat = CategoryImpl(id, it.jsonObject, state)
+                categoryCache.put(cat.id, cat)
+            }
         }
 
-        data["roles"].jsonObject.forEach { id, r ->
-            val role = RoleImpl(id, this.id, r.jsonObject, state)
-            roleCache.put(id, role)
+        data["roles"].maybe {
+            it.jsonObject.forEach { id, r ->
+                val role = RoleImpl(id, this.id, r.jsonObject, state)
+                roleCache.put(id, role)
+            }
         }
     }
 
