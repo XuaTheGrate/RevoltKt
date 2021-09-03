@@ -1,9 +1,13 @@
 package me.maya.revolt.api.impl
 
 import com.mayak.json.JsonObject
+import io.azam.ulidj.ULID
 import me.maya.revolt.State
 import me.maya.revolt.api.*
 import me.maya.revolt.util.Cache
+import me.maya.revolt.util.restrictRange
+import me.maya.revolt.util.toPermissions
+import java.io.File
 
 class ServerImpl internal constructor(
     data: JsonObject,
@@ -116,10 +120,105 @@ class ServerImpl internal constructor(
     override fun getRole(id: String): Role? {
         return roleCache.maybeGet(id)
     }
-}
 
-inline fun <reified T: IChannel<T>> Server.getChannel(id: String): T? {
-    this as ServerImpl
-    val c = textChannelCache.maybeGet(id) ?: voiceChannelCache.maybeGet(id) ?: return null
-    return c.takeIf { it is T } as T?
+    override suspend fun edit(name: String?, description: String?) {
+        state.http.editServer(id, name?.restrictRange(1..32), description?.restrictRange(0..1024))
+    }
+
+    override suspend fun editCategories(categories: List<Category.Update>) {
+        state.http.editServer(id, categories = categories)
+    }
+
+    override suspend fun editSystemMessages(
+        userJoinedChannel: TextChannel?,
+        userLeftChannel: TextChannel?,
+        userKickedChannel: TextChannel?,
+        userBannedChannel: TextChannel?
+    ) {
+        state.http.editServer(id, systemMessages = object: Server.SystemMessages() {
+            override val userJoined = userJoinedChannel
+            override val userLeft = userLeftChannel
+            override val userKicked = userKickedChannel
+            override val userBanned = userBannedChannel
+
+            override fun update(ujc: String?, ulc: String?, ukc: String?, ubc: String?) = throw RuntimeException()
+            override fun update(other: Server.SystemMessages) = throw RuntimeException()
+        })
+    }
+
+    override suspend fun leave() {
+        state.http.leaveServer(id)
+    }
+
+    override suspend fun fetchInvites(): List<Invite> {
+        val data = state.http.getInvites(id)
+        return data.map { Invite(it.jsonObject, state) }
+    }
+
+    override suspend fun banMember(member: Member, reason: String?) = state.http.banUser(id, member.id, reason)
+    override suspend fun banMember(user: User, reason: String?) = state.http.banUser(id, user.id, reason)
+
+    override suspend fun unbanMember(member: Member) {
+        state.http.unbanUser(id, member.id)
+    }
+
+    override suspend fun unbanMember(user: User) {
+        state.http.unbanUser(id, user.id)
+    }
+
+    override suspend fun fetchBans(): List<Server.Ban> {
+        val data = state.http.getBans(id)
+        return data["bans"].jsonArray.map { val it = it.jsonObject
+            Server.Ban(it["_id"].jsonObject["user"].string, it["reason"].maybe { it.string })
+        }
+    }
+
+    override suspend fun createCategory(name: String) {
+        state.http.editServer(id, categories = categories.map { it.update() } + listOf(Category.Update(ULID.random(), name, mutableListOf())))
+    }
+
+    override suspend fun createTextChannel(name: String, description: String?): TextChannel {
+        val data = state.http.createChannel(id, ChannelType.Text, name.restrictRange(1..32), description?.restrictRange(0..1024))
+        return TextChannelImpl(data, state)
+    }
+
+    override suspend fun createVoiceChannel(name: String, description: String?): VoiceChannel {
+        val data = state.http.createChannel(id, ChannelType.Voice, name.restrictRange(1..32), description?.restrictRange(0..1024))
+        return VoiceChannelImpl(data, state)
+    }
+
+    override suspend fun fetchMember(id: String): Member {
+        val data = state.http.getMember(this.id, id)
+        return MemberImpl(data, state)
+    }
+
+    override suspend fun fetchMembers(): List<Member> {
+        val members = state.http.getMembers(id)
+        return members["members"].jsonArray.map { MemberImpl(it.jsonObject, state) }
+    }
+
+    override suspend fun kickMember(member: Member) {
+        state.http.kickMember(id, member.id)
+    }
+
+    override suspend fun createRole(name: String): Role.Partial {
+        val data = state.http.createRole(id, name)
+        return Role.Partial(data["id"].string, data["permissions"].jsonArray.toPermissions())
+    }
+
+    private suspend fun setImage(tag: String, data: ByteArray, filename: String) {
+        val imageId = state.http.uploadFile(tag, filename, data)
+        if (tag == "banner") state.http.editServer(id, banner = imageId)
+        else state.http.editServer(id, icon = imageId)
+    }
+
+    override suspend fun setBanner(file: File) {
+        val data = file.readBytes()
+        setImage("banners", data, file.name)
+    }
+
+    override suspend fun setIcon(file: File) {
+        val data = file.readBytes()
+        setImage("icons", data, file.name)
+    }
 }

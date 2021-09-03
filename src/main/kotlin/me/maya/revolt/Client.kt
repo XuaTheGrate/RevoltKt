@@ -1,7 +1,11 @@
 package me.maya.revolt
 
 import kotlinx.coroutines.runBlocking
+import me.maya.revolt.api.Invite
+import me.maya.revolt.api.Server
 import me.maya.revolt.api.User
+import me.maya.revolt.api.impl.ServerImpl
+import me.maya.revolt.api.impl.UserImpl
 import me.maya.revolt.events.Event
 import me.maya.revolt.events.EventHandler
 import kotlin.properties.Delegates
@@ -15,7 +19,17 @@ open class Client {
 
     internal var errorCallback: (suspend (Event, Throwable) -> Unit)? = null
 
-    suspend fun fetchUser(id: String): User = TODO()
+    suspend fun fetchUser(id: String): User {
+        val data = http.getUser(id)
+        return UserImpl(data, state)
+    }
+
+    suspend fun fetchServer(id: String): Server {
+        val data = http.getServer(id)
+        return ServerImpl(data, state)
+    }
+
+    suspend fun fetchInvite(code: String): Invite = TODO("the payload from this is absolute ass, remind me to talk to insert about fixing that")
 
     fun runForever() = runBlocking<Unit> {
         gateway.start()

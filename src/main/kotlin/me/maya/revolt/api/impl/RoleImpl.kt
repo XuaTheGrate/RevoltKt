@@ -4,6 +4,7 @@ import com.mayak.json.JsonObject
 import me.maya.revolt.State
 import me.maya.revolt.api.Role
 import me.maya.revolt.api.Server
+import me.maya.revolt.util.toPermissions
 import java.awt.Color
 
 class RoleImpl internal constructor(
@@ -15,10 +16,18 @@ class RoleImpl internal constructor(
     override val server: Server get() = state.servers.get(serverId)
 
     override var name = data["name"].string
-    override var permissions: List<Int> = data["permissions"].jsonArray.map { it.int }
-    override var colour: Color = Color.decode(data["colour"].string)
-    override var hoist: Boolean = data["hoist"].boolean
-    override var rank: Int = data["rank"].int
+    override var permissions: Pair<Int, Int> = data["permissions"].jsonArray.toPermissions()
+    override var colour: Color? = data["colour"].maybe { it.string }?.let { Color.decode(it) }
+    override var hoist: Boolean = data["hoist"].maybe { it.boolean } ?: false
+    override var rank: Int? = data["rank"].maybe { it.int }
+
+    override suspend fun edit(name: String, hoist: Boolean?, rank: Int?, color: Color?, colour: Color?) {
+        state.http.editRole(serverId, id, name, color ?: colour, hoist, rank)
+    }
+
+    override suspend fun delete() {
+        state.http.deleteRole(serverId, id)
+    }
 
     override fun update(data: Role): Role {
         data as RoleImpl

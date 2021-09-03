@@ -12,6 +12,7 @@ class State {
     var cdn by Delegates.notNull<String>()
     var ws by Delegates.notNull<String>()
     val api: String = "https://api.revolt.chat"
+    var selfUserId: String by Delegates.notNull()
 
     val users = Cache<User>()
     val servers = Cache<Server>()
@@ -23,10 +24,15 @@ class State {
     }
 
     suspend fun readyCacheUpdate(data: JsonObject) {
-        data["users"].jsonArray.forEach {
-            val user = UserImpl(it.jsonObject, this)
-            users.put(user.id, user)
-        }
+        // this assertion ensures future changes where user objects may be included
+        assert(data["users"].jsonArray.size == 1)
+
+        val userData = data["users"].jsonArray.first()
+        val user = UserImpl(userData.jsonObject, this)
+        users.put(user.id, user)
+
+        selfUserId = user.id
+
         data["servers"].jsonArray.forEach {
             val server = ServerImpl(it.jsonObject, this)
 

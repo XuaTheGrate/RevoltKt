@@ -7,4 +7,10 @@ interface Message: IHasID, IUpdateable<Message> {
     val content: String
     val attachments: List<Attachment>
     val server: Server
+
+    suspend fun edit(content: String)
+
+    suspend fun delete()
+
+    suspend fun reply(content: String, mention: Boolean = false): Message
 }

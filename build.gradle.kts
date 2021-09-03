@@ -11,7 +11,7 @@ plugins {
 }
 
 group = "me.maya.revolt"
-version = "0.1.1"
+version = "0.2.0"
 
 repositories {
     mavenCentral()
@@ -31,6 +31,8 @@ dependencies {
 
     implementation("org.slf4j", "slf4j-api", slf4jVersion)
     // implementation("org.slf4j", "slf4j-simple", slf4jVersion)
+
+    implementation("io.azam.ulidj", "ulidj", "1.0.0")
 
     implementation(files(".\\libs\\JsonKt_mpp-jvm-1.0-SNAPSHOT.jar"))
 }

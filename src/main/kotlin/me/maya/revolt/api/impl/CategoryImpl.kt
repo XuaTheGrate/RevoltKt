@@ -19,7 +19,7 @@ class CategoryImpl internal constructor(
 
     override var title: String = data["title"].string
 
-    private val channelIds = mutableSetOf<String>()
+    internal val channelIds = mutableSetOf<String>()
 
     override fun update(data: Category): Category {
         data as CategoryImpl

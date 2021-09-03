@@ -56,9 +56,9 @@ Or if you'd rather, you can download the artifacts from `GitHub releases <https:
 .. code-block:: kotlin
 
     dependencies {
-        implementation(files("Revolt-0.1.1-full.jar"))
+        implementation(files("Revolt-0.2.0-full.jar"))
         // `full` contains all dependencies (ktor, kotlin-reflect etc)
-        // If needed, you can use `Revolt-0.1.1.jar` for a version without dependencies
+        // If needed, you can use `Revolt-0.2.0.jar` for a version without dependencies
     }
 
 Support
